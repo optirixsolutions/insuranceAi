@@ -1,0 +1,93 @@
+[project]
+name = "claimos-backend"
+version = "0.1.0"
+description = "ClaimOS API, workers and agent orchestration"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.162,<0.163",
+    "uvicorn[standard]>=0.38",
+    "pydantic>=2.14,<3",
+    "pydantic-settings>=2.11",
+    "sqlalchemy[asyncio]>=2.1,<2.2",
+    "asyncpg>=0.32",
+    "alembic>=1.20,<1.21",
+    "redis>=8.1,<9",
+    "celery[redis]>=5.6,<5.7",
+    "structlog>=26.1",
+    "boto3>=1.40",
+    "anyio>=4.6",
+    "argon2-cffi>=25.1",
+    "pypdfium2>=4.30",
+    "pytesseract>=0.3.13",
+    "pillow>=11.0",
+    "numpy>=2.1",
+    "python-docx>=1.1",
+    "python-multipart>=0.0.20",
+    "httpx>=0.28",
+    "langgraph>=1.0",
+    "langgraph-checkpoint-postgres>=2.0",
+    "psycopg[binary]>=3.2",
+    "reportlab>=4.2",
+    "cryptography>=44",
+    "prometheus-client>=0.21",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+    "pytest-asyncio>=1.2",
+    "pytest-cov>=7.0",
+    "httpx>=0.28",
+    "ruff>=0.14",
+    "mypy>=1.18",
+    "boto3-stubs[s3]>=1.40",
+    "hypothesis>=6.100",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["."]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF", "N", "SIM", "PTH", "T20"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108", "S311", "T201"]
+"evaluations/**" = ["S311", "T201"]  # seeded generators for synthetic data; CLI output
+"benchmarks/**" = ["T201", "S105"]  # CLI output; the synthetic benchmark account password
+"migrations/**" = ["N999", "S608", "E501"]  # DDL is assembled from static strings
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["^migrations/versions/"]
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "kombu.*", "botocore.*", "pytesseract.*", "pypdfium2.*", "reportlab.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Celery and kombu ship without type information; keep the exemption to this one module.
+module = ["tasks.celery_app", "tasks.documents", "tasks.ai", "tasks.agents", "tasks.workflow", "tasks.reports", "tasks.maintenance", "app.api.v1.ai"]
+disallow_untyped_decorators = false
+disallow_untyped_calls = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+markers = [
+    "integration: requires running PostgreSQL, Redis and S3 storage (see docs/runbooks/local-development.md)",
+    "system: drives the running docker-compose stack over HTTP (set CLAIMOS_SYSTEM_URL)",
+]
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+source = ["app", "tasks", "rules_engine"]
+branch = true

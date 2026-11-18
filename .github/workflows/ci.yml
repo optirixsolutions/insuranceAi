@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg17-trixie
+        env:
+          POSTGRES_USER: claimos_migrator
+          POSTGRES_PASSWORD: ci_migrator_pw
+          POSTGRES_DB: claimos_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U claimos_migrator -d claimos_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:8.6.8-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      CLAIMOS_INTEGRATION: "1"
+      APP_ENV: test
+      LOG_JSON: "false"
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://claimos_migrator:ci_migrator_pw@localhost:5432/claimos_test
+      DATABASE_URL: postgresql+asyncpg://claimos_app:ci_app_pw@localhost:5432/claimos_test
+      REDIS_URL: redis://localhost:6379/0
+      STORAGE_PROVIDER: s3
+      S3_ENDPOINT_URL: http://localhost:8333
+      S3_ACCESS_KEY_ID: ci-access-key
+      S3_SECRET_ACCESS_KEY: ci-secret-key
+      S3_SERVER_SIDE_ENCRYPTION: AES256
+      # Throwaway CI-only key for the ephemeral SeaweedFS container.
+      WEED_S3_SSE_KEK: 5f0c2e8a9b7d4e1f3a6c8b0d2e4f6a8c1b3d5e7f9a0c2e4f6b8d0a2c4e6f8a0b
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.19"
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Lint
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: Type check
+        run: uv run mypy app tasks tests migrations/env.py
+      - name: Unit tests
+        run: uv run pytest tests/unit --cov --cov-report=term-missing
+      - name: Rules engine, agents and acceptance gates (>= 95% branch coverage of rules_engine)
+        run: uv run pytest tests/rules tests/agents --cov=rules_engine --cov-branch --cov-fail-under=95 --cov-report=term-missing
+      - name: Start S3-compatible storage
+        run: |
+          docker run -d --name object-storage -p 8333:8333 \
+            -e S3_ACCESS_KEY_ID -e S3_SECRET_ACCESS_KEY -e WEED_S3_SSE_KEK \
+            -v "$GITHUB_WORKSPACE/infrastructure/seaweedfs/entrypoint.sh:/opt/entrypoint.sh:ro" \
+            --entrypoint /bin/sh chrislusf/seaweedfs:4.50 /opt/entrypoint.sh
+      - name: Create application database role
+        env:
+          PGPASSWORD: ci_migrator_pw
+        run: |
+          psql -h localhost -U claimos_migrator -d claimos_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE claimos_app LOGIN PASSWORD 'ci_app_pw' NOSUPERUSER NOBYPASSRLS;
+          GRANT USAGE ON SCHEMA public TO claimos_app;
+          ALTER DEFAULT PRIVILEGES FOR ROLE claimos_migrator IN SCHEMA public
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO claimos_app;
+          SQL
+      - name: Migrations
+        run: uv run alembic upgrade head
+      - name: Integration tests
+        run: uv run pytest -m integration tests/integration
+
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  compose:
+    runs-on: ubuntu-24.04
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate development environment
+        run: python3 scripts/dev_setup.py
+      - name: Build and start stack
+        run: docker compose up -d --build --wait --wait-timeout 300
+      - name: Readiness
+        run: curl -fsS http://localhost:8080/api/v1/health/ready | tee readiness.json
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: End-to-end tests
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+          pnpm e2e
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 200

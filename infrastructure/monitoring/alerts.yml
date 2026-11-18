@@ -1,0 +1,31 @@
+groups:
+  - name: claimos-api
+    rules:
+      - alert: ClaimOSApiDown
+        expr: up{job="claimos-api"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "ClaimOS API is not answering metrics scrapes"
+          runbook: docs/runbooks/incident-response.md
+      - alert: ClaimOSHighErrorRate
+        expr: |
+          sum(rate(claimos_http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(claimos_http_requests_total[5m])), 1e-9) > 0.02
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: "More than 2% of API requests fail with 5xx"
+      - alert: ClaimOSSlowRequests
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(claimos_http_request_duration_seconds_bucket{route!~".*/events$"}[5m]))) > 2
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 API latency above 2 s (event streams excluded)"
+      - alert: ClaimOSAuthFailuresSpike
+        expr: sum(rate(claimos_http_requests_total{route=~"/api/v1/auth/(login|mfa/verify)",status=~"401|429"}[5m])) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Sustained failed sign-ins: possible credential stuffing"

@@ -1,0 +1,24 @@
+# ClaimOS on Kubernetes (Phase 13). Render: kubectl kustomize infrastructure/k8s
+# Assumes managed PostgreSQL (pgvector), Redis and S3. Create the secret first (never commit it):
+#   kubectl -n claimos create secret generic claimos-secrets --from-file=secrets/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: claimos
+labels:
+  - pairs: { app.kubernetes.io/part-of: claimos }
+resources:
+  - namespace.yaml
+  - config.yaml
+  - migrate-job.yaml
+  - api.yaml
+  - workers.yaml
+  - frontend.yaml
+  - ingress.yaml
+  - network-policies.yaml
+images:
+  - name: claimos-backend
+    newName: registry.example.com/claimos/claimos-backend
+    newTag: "1.0.0"
+  - name: claimos-frontend
+    newName: registry.example.com/claimos/claimos-frontend
+    newTag: "1.0.0"

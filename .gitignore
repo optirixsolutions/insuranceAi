@@ -1,0 +1,43 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+backend/.local-storage/
+
+# Node / Next.js
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+frontend/playwright-report/
+frontend/test-results/
+frontend/coverage/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/settings.local.json
+
+# Generated sign-in details from scripts/seed_synthetic.py
+.seed-credentials.json
+
+# Evaluation run output (the curated report lives in docs/evaluations/)
+backend/evaluations/reports/
+
+# Production deployment material (Phase 13): never commit
+/secrets/
+/tls/
+/backups/
+prod.env

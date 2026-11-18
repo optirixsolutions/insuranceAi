@@ -1,0 +1,552 @@
+{
+  "label": "",
+  "profile": "scanned",
+  "concurrency": 2,
+  "warmup": 1,
+  "started_at": "2026-11-18T14:46:02.655152+00:00",
+  "wall_s": 17.85912013053894,
+  "throughput_claims_per_min": 20.157767984571823,
+  "edge_throttled_requests": 0,
+  "ai": {
+    "provider": "openrouter",
+    "key_status": "rejected",
+    "key_detail": "unauthorized: User not found.",
+    "default_model": "openrouter/free"
+  },
+  "summary": {
+    "claims": 6,
+    "succeeded": 6,
+    "failure_rate": 0.0,
+    "stop_events": {
+      "interrupt": 6
+    },
+    "process_s": {
+      "n": 6,
+      "min": 0.3430910110473633,
+      "p50": 0.477386474609375,
+      "p90": 0.742058515548706,
+      "p95": 0.7643177509307861,
+      "p99": 0.7821251392364502,
+      "max": 0.7865769863128662,
+      "mean": 0.5346035162607828
+    },
+    "documents_s": {
+      "n": 6,
+      "min": 2.1583542823791504,
+      "p50": 3.9306836128234863,
+      "p90": 5.221964955329895,
+      "p95": 5.466491520404816,
+      "p99": 5.662112772464752,
+      "max": 5.711018085479736,
+      "mean": 3.85239577293396
+    },
+    "end_to_end_s": {
+      "n": 6,
+      "min": 2.641173839569092,
+      "p50": 4.419312477111816,
+      "p90": 5.956610321998596,
+      "p95": 6.188282549381256,
+      "p99": 6.373620331287384,
+      "max": 6.419954776763916,
+      "mean": 4.399291078249614
+    },
+    "upload_s": {
+      "n": 6,
+      "min": 0.05652332305908203,
+      "p50": 0.06860184669494629,
+      "p90": 0.08318424224853516,
+      "p95": 0.08357858657836914,
+      "p99": 0.08389406204223633,
+      "max": 0.08397293090820312,
+      "mean": 0.0697859525680542
+    },
+    "sse_lag_ms": {
+      "n": 66,
+      "min": 6.51097297668457,
+      "p50": 10.151386260986328,
+      "p90": 16.005635261535645,
+      "p95": 17.07679033279419,
+      "p99": 19.32818889617917,
+      "max": 22.458314895629883,
+      "mean": 10.756799668976754
+    },
+    "nodes_s": {
+      "DOCUMENT_PROCESSING": {
+        "n": 6,
+        "min": 0.06909394264221191,
+        "p50": 0.10157299041748047,
+        "p90": 0.21277451515197754,
+        "p95": 0.2644927501678467,
+        "p99": 0.305867338180542,
+        "max": 0.3162109851837158,
+        "mean": 0.13084765275319418
+      },
+      "DOCUMENT_VALIDATION": {
+        "n": 6,
+        "min": 0.009742975234985352,
+        "p50": 0.0108795166015625,
+        "p90": 0.013116955757141113,
+        "p95": 0.01318448781967163,
+        "p99": 0.013238513469696045,
+        "max": 0.013252019882202148,
+        "mean": 0.011298497517903646
+      },
+      "INTAKE": {
+        "n": 6,
+        "min": 0.101531982421875,
+        "p50": 0.13237249851226807,
+        "p90": 0.2861030101776123,
+        "p95": 0.3538874387741089,
+        "p99": 0.4081149816513062,
+        "max": 0.42167186737060547,
+        "mean": 0.17787750562032065
+      }
+    },
+    "llm_calls_per_claim": {
+      "n": 6,
+      "min": 0.0,
+      "p50": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "p99": 0.0,
+      "max": 0.0,
+      "mean": 0.0
+    },
+    "cost_usd_per_claim": {
+      "n": 6,
+      "min": 0.0,
+      "p50": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "p99": 0.0,
+      "max": 0.0,
+      "mean": 0.0
+    },
+    "target": {
+      "p50_le_180s": true,
+      "p90_le_240s": true
+    }
+  },
+  "records": [
+    {
+      "index": 0,
+      "profile": "scanned",
+      "ok": true,
+      "claim_id": "c4598caa-596d-45be-b40b-a2e2aa15c862",
+      "documents": 4,
+      "upload_bytes": 165557,
+      "upload_s": 0.06862998008728027,
+      "documents_s": 2.1276869773864746,
+      "document_statuses": [
+        "needs_review",
+        "needs_review",
+        "processed",
+        "processed"
+      ],
+      "sse_lag_ms": [
+        14.355659484863281,
+        9.227275848388672,
+        8.73112678527832,
+        12.258529663085938,
+        8.556365966796875,
+        7.908344268798828,
+        7.602691650390625,
+        7.782697677612305,
+        7.166862487792969,
+        7.888317108154297,
+        9.415864944458008
+      ],
+      "process_s": 0.3758559226989746,
+      "end_to_end_s": 2.5121984481811523,
+      "stop_event": "interrupt",
+      "execution_status": "interrupted",
+      "recommendation": null,
+      "node_s": {
+        "INTAKE": 0.11165189743041992,
+        "DOCUMENT_PROCESSING": 0.07902693748474121,
+        "DOCUMENT_VALIDATION": 0.009997129440307617
+      },
+      "agents": [
+        {
+          "agent": "document",
+          "duration_ms": 41,
+          "used_llm": false,
+          "llm_note": "No verified model assigned to this agent; deterministic core only",
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        },
+        {
+          "agent": "intake",
+          "duration_ms": 63,
+          "used_llm": false,
+          "llm_note": null,
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_calls": 0
+    },
+    {
+      "index": 1,
+      "profile": "scanned",
+      "ok": true,
+      "claim_id": "81e5bed3-91c9-43a6-a7a1-a92618f3402e",
+      "documents": 4,
+      "upload_bytes": 163401,
+      "upload_s": 0.06386971473693848,
+      "documents_s": 3.168879508972168,
+      "document_statuses": [
+        "needs_review",
+        "needs_review",
+        "processed",
+        "processed"
+      ],
+      "sse_lag_ms": [
+        17.18425750732422,
+        10.204315185546875,
+        9.60540771484375,
+        16.47162437438965,
+        10.953187942504883,
+        8.45646858215332,
+        8.025884628295898,
+        7.782936096191406,
+        8.103609085083008,
+        8.855581283569336,
+        10.629892349243164
+      ],
+      "process_s": 0.4256401062011719,
+      "end_to_end_s": 3.603395700454712,
+      "stop_event": "interrupt",
+      "execution_status": "interrupted",
+      "recommendation": null,
+      "node_s": {
+        "INTAKE": 0.13015484809875488,
+        "DOCUMENT_PROCESSING": 0.08729696273803711,
+        "DOCUMENT_VALIDATION": 0.010925054550170898
+      },
+      "agents": [
+        {
+          "agent": "document",
+          "duration_ms": 41,
+          "used_llm": false,
+          "llm_note": "No verified model assigned to this agent; deterministic core only",
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        },
+        {
+          "agent": "intake",
+          "duration_ms": 72,
+          "used_llm": false,
+          "llm_note": null,
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_calls": 0
+    },
+    {
+      "index": 2,
+      "profile": "scanned",
+      "ok": true,
+      "claim_id": "38901644-9a1f-4747-9ef1-4d18a0701a9f",
+      "documents": 4,
+      "upload_bytes": 169991,
+      "upload_s": 0.0733339786529541,
+      "documents_s": 4.732911825180054,
+      "document_statuses": [
+        "needs_review",
+        "needs_review",
+        "processed",
+        "processed"
+      ],
+      "sse_lag_ms": [
+        22.458314895629883,
+        14.263391494750977,
+        9.592771530151367,
+        15.53964614868164,
+        10.294675827026367,
+        8.874654769897461,
+        7.582426071166992,
+        7.256746292114258,
+        7.642030715942383,
+        8.819818496704102,
+        10.991811752319336
+      ],
+      "process_s": 0.48168492317199707,
+      "end_to_end_s": 5.235229253768921,
+      "stop_event": "interrupt",
+      "execution_status": "interrupted",
+      "recommendation": null,
+      "node_s": {
+        "INTAKE": 0.12878203392028809,
+        "DOCUMENT_PROCESSING": 0.09549498558044434,
+        "DOCUMENT_VALIDATION": 0.010055065155029297
+      },
+      "agents": [
+        {
+          "agent": "document",
+          "duration_ms": 47,
+          "used_llm": false,
+          "llm_note": "No verified model assigned to this agent; deterministic core only",
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        },
+        {
+          "agent": "intake",
+          "duration_ms": 71,
+          "used_llm": false,
+          "llm_note": null,
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_calls": 0
+    },
+    {
+      "index": 3,
+      "profile": "scanned",
+      "ok": true,
+      "claim_id": "650b37c5-a9f5-4288-96c1-1b7e6ac266c2",
+      "documents": 4,
+      "upload_bytes": 164254,
+      "upload_s": 0.08239555358886719,
+      "documents_s": 2.6507232189178467,
+      "document_statuses": [
+        "needs_review",
+        "needs_review",
+        "processed",
+        "processed"
+      ],
+      "sse_lag_ms": [
+        12.410640716552734,
+        8.114337921142578,
+        7.747411727905273,
+        11.156320571899414,
+        7.8563690185546875,
+        7.246971130371094,
+        6.965398788452148,
+        7.185459136962891,
+        6.51097297668457,
+        7.255315780639648,
+        9.790182113647461
+      ],
+      "process_s": 0.3430910110473633,
+      "end_to_end_s": 3.0027270317077637,
+      "stop_event": "interrupt",
+      "execution_status": "interrupted",
+      "recommendation": null,
+      "node_s": {
+        "INTAKE": 0.101531982421875,
+        "DOCUMENT_PROCESSING": 0.06909394264221191,
+        "DOCUMENT_VALIDATION": 0.009742975234985352
+      },
+      "agents": [
+        {
+          "agent": "document",
+          "duration_ms": 34,
+          "used_llm": false,
+          "llm_note": "No verified model assigned to this agent; deterministic core only",
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        },
+        {
+          "agent": "intake",
+          "duration_ms": 55,
+          "used_llm": false,
+          "llm_note": null,
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_calls": 0
+    },
+    {
+      "index": 4,
+      "profile": "scanned",
+      "ok": true,
+      "claim_id": "dab290aa-62f8-4bad-ba93-2cc9b6b46180",
+      "documents": 4,
+      "upload_bytes": 166693,
+      "upload_s": 0.05862021446228027,
+      "documents_s": 5.711018085479736,
+      "document_statuses": [
+        "needs_review",
+        "needs_review",
+        "processed",
+        "processed"
+      ],
+      "sse_lag_ms": [
+        17.241239547729492,
+        10.512590408325195,
+        11.163949966430664,
+        14.652252197265625,
+        10.025978088378906,
+        7.989645004272461,
+        8.008241653442383,
+        7.806301116943359,
+        10.144948959350586,
+        10.244369506835938,
+        13.89169692993164
+      ],
+      "process_s": 0.6975400447845459,
+      "end_to_end_s": 6.419954776763916,
+      "stop_event": "interrupt",
+      "execution_status": "interrupted",
+      "recommendation": null,
+      "node_s": {
+        "INTAKE": 0.15053415298461914,
+        "DOCUMENT_PROCESSING": 0.3162109851837158,
+        "DOCUMENT_VALIDATION": 0.010833978652954102
+      },
+      "agents": [
+        {
+          "agent": "document",
+          "duration_ms": 273,
+          "used_llm": false,
+          "llm_note": "No verified model assigned to this agent; deterministic core only",
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        },
+        {
+          "agent": "intake",
+          "duration_ms": 81,
+          "used_llm": false,
+          "llm_note": null,
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_calls": 0
+    },
+    {
+      "index": 5,
+      "profile": "scanned",
+      "ok": true,
+      "claim_id": "770a452f-dc94-4079-8275-5c62b70bd7ae",
+      "documents": 4,
+      "upload_bytes": 172332,
+      "upload_s": 0.05652332305908203,
+      "documents_s": 4.692487716674805,
+      "document_statuses": [
+        "needs_review",
+        "needs_review",
+        "processed",
+        "processed"
+      ],
+      "sse_lag_ms": [
+        14.925956726074219,
+        16.504287719726562,
+        11.834859848022461,
+        17.642736434936523,
+        10.953903198242188,
+        13.346433639526367,
+        10.503530502319336,
+        8.536100387573242,
+        8.530378341674805,
+        10.603666305541992,
+        10.028839111328125
+      ],
+      "process_s": 0.7865769863128662,
+      "end_to_end_s": 5.493265867233276,
+      "stop_event": "interrupt",
+      "execution_status": "interrupted",
+      "recommendation": null,
+      "node_s": {
+        "INTAKE": 0.42167186737060547,
+        "DOCUMENT_PROCESSING": 0.1076509952545166,
+        "DOCUMENT_VALIDATION": 0.012981891632080078
+      },
+      "agents": [
+        {
+          "agent": "document",
+          "duration_ms": 54,
+          "used_llm": false,
+          "llm_note": "No verified model assigned to this agent; deterministic core only",
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        },
+        {
+          "agent": "intake",
+          "duration_ms": 116,
+          "used_llm": false,
+          "llm_note": null,
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_calls": 0
+    },
+    {
+      "index": 6,
+      "profile": "scanned",
+      "ok": true,
+      "claim_id": "4fa0a805-75dd-4bd1-a437-25f6727adee4",
+      "documents": 4,
+      "upload_bytes": 167927,
+      "upload_s": 0.08397293090820312,
+      "documents_s": 2.1583542823791504,
+      "document_statuses": [
+        "needs_review",
+        "needs_review",
+        "processed",
+        "processed"
+      ],
+      "sse_lag_ms": [
+        13.326406478881836,
+        9.296655654907227,
+        9.78541374206543,
+        16.7543888092041,
+        11.37995719909668,
+        10.512590408325195,
+        9.812116622924805,
+        8.867502212524414,
+        10.15782356262207,
+        10.343313217163086,
+        12.791872024536133
+      ],
+      "process_s": 0.47308802604675293,
+      "end_to_end_s": 2.641173839569092,
+      "stop_event": "interrupt",
+      "execution_status": "interrupted",
+      "recommendation": null,
+      "node_s": {
+        "INTAKE": 0.13459014892578125,
+        "DOCUMENT_PROCESSING": 0.10933804512023926,
+        "DOCUMENT_VALIDATION": 0.013252019882202148
+      },
+      "agents": [
+        {
+          "agent": "document",
+          "duration_ms": 58,
+          "used_llm": false,
+          "llm_note": "No verified model assigned to this agent; deterministic core only",
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        },
+        {
+          "agent": "intake",
+          "duration_ms": 77,
+          "used_llm": false,
+          "llm_note": null,
+          "model": null,
+          "tokens": 0,
+          "cost_usd": 0.0
+        }
+      ],
+      "llm_calls": 0
+    }
+  ]
+}

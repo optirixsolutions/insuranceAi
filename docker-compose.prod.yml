@@ -1,0 +1,239 @@
+# ClaimOS production stack for a single host (Phase 13). Kubernetes manifests: infrastructure/k8s.
+#
+#   1. Build and push images, then set CLAIMOS_IMAGE_REGISTRY and CLAIMOS_VERSION.
+#   2. Put one secret per file in ./secrets/ (see docs/runbooks/production-deployment.md; never commit them).
+#   3. Put TLS certificates in ./tls/fullchain.pem and ./tls/privkey.pem.
+#   4. docker compose -f docker-compose.prod.yml --env-file prod.env up -d --wait
+#
+# Differences from the development file: APP_ENV=production (the API refuses development adapters),
+# secrets come from files under /run/secrets instead of environment variables, TLS at Nginx, only ports
+# 80/443 are published, the data network is internal, one worker pool per queue, Prometheus and Grafana.
+
+name: claimos-prod
+
+x-image: &backend-image
+  image: ${CLAIMOS_IMAGE_REGISTRY:?set CLAIMOS_IMAGE_REGISTRY}/claimos-backend:${CLAIMOS_VERSION:?set CLAIMOS_VERSION}
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  networks: [data, egress]
+  restart: unless-stopped
+  environment:
+    APP_ENV: production
+    APP_BASE_URL: ${APP_BASE_URL:?set APP_BASE_URL (https://...)}
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    LOG_JSON: "true"
+    STORAGE_PROVIDER: s3
+    S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+    S3_REGION: ${S3_REGION:?set S3_REGION}
+    S3_SERVER_SIDE_ENCRYPTION: ${S3_SERVER_SIDE_ENCRYPTION:-aws:kms}
+    S3_KMS_KEY_ID: ${S3_KMS_KEY_ID:-}
+    S3_BUCKET_DOCUMENTS: ${S3_BUCKET_DOCUMENTS:-claimos-documents}
+    S3_BUCKET_REPORTS: ${S3_BUCKET_REPORTS:-claimos-reports}
+    AV_PROVIDER: clamav
+    CLAMAV_HOST: clamav
+    OCR_ENGINE: tesseract
+    AI_PROVIDER: openrouter
+    OPENROUTER_DEFAULT_MODEL: ${OPENROUTER_DEFAULT_MODEL:?choose a production model}
+    EMAIL_PROVIDER: smtp
+    SMTP_HOST: ${SMTP_HOST:?set SMTP_HOST}
+    SMTP_PORT: ${SMTP_PORT:-587}
+    SMTP_USERNAME: ${SMTP_USERNAME:-}
+    SMTP_FROM: ${SMTP_FROM:?set SMTP_FROM}
+    SMS_PROVIDER: ${SMS_PROVIDER:-log}
+  # Read by app.core.config from /run/secrets/<setting name>; never passed as environment variables.
+  secrets:
+    - database_url
+    - migration_database_url
+    - redis_url
+    - s3_access_key_id
+    - s3_secret_access_key
+    - openrouter_api_key
+    - data_encryption_key
+    - smtp_password
+    - metrics_token
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg17-trixie
+    environment:
+      POSTGRES_USER: claimos_migrator
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: claimos
+      CLAIMOS_APP_DB_PASSWORD_FILE: /run/secrets/claimos_app_db_password
+    secrets: [postgres_password, claimos_app_db_password]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups
+    networks: [data]
+    shm_size: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U claimos_migrator -d claimos"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.6.8-alpine
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$(cat /run/secrets/redis_password)\""]
+    secrets: [redis_password]
+    volumes: [redis-data:/data]
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$(cat /run/secrets/redis_password)\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  clamav:
+    image: clamav/clamav:1.4
+    volumes: [clamav-data:/var/lib/clamav]
+    networks: [data, egress]
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 40
+      start_period: 600s
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend-image
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    <<: *backend-image
+    networks: [edge, data, egress]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=3).status != 200)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      replicas: ${API_REPLICAS:-2}
+
+  # One pool per queue (ADR-004): a slow queue never starves another.
+  worker-system:
+    <<: *backend-image
+    command: ["celery", "-A", "tasks.celery_app:celery_app", "worker", "-Q", "system", "--concurrency=2", "--loglevel=INFO", "-n", "system@%h"]
+    depends_on: &worker-deps
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  worker-workflow:
+    <<: *backend-image
+    command: ["celery", "-A", "tasks.celery_app:celery_app", "worker", "-Q", "workflow", "--concurrency=4", "--loglevel=INFO", "-n", "workflow@%h"]
+    depends_on: *worker-deps
+
+  worker-reports:
+    <<: *backend-image
+    command: ["celery", "-A", "tasks.celery_app:celery_app", "worker", "-Q", "reports", "--concurrency=2", "--loglevel=INFO", "-n", "reports@%h"]
+    depends_on: *worker-deps
+
+  worker-documents:
+    <<: *backend-image
+    command: ["celery", "-A", "tasks.celery_app:celery_app", "worker", "-Q", "documents", "--concurrency=2", "--loglevel=INFO", "-n", "documents@%h", "--max-tasks-per-child=50"]
+    depends_on: *worker-deps
+
+  # Exactly one beat process: it schedules retention, audit verification, dispatch and recovery.
+  beat:
+    <<: *backend-image
+    networks: [data]
+    command: ["celery", "-A", "tasks.celery_app:celery_app", "beat", "--loglevel=INFO", "--schedule", "/tmp/celerybeat-schedule"]
+    depends_on: *worker-deps
+
+  frontend:
+    image: ${CLAIMOS_IMAGE_REGISTRY}/claimos-frontend:${CLAIMOS_VERSION}
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.30-alpine
+    volumes:
+      - ./infrastructure/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./tls:/etc/nginx/tls:ro
+    ports: ["80:80", "443:443"]
+    networks: [edge]
+    depends_on:
+      api: { condition: service_healthy }
+      frontend: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=30d"]
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./secrets/metrics_token:/etc/prometheus/metrics_token:ro
+      - prometheus-data:/prometheus
+    networks: [edge]
+    ports: ["127.0.0.1:9090:9090"]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    secrets: [grafana_admin_password]
+    volumes:
+      - ./infrastructure/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks: [edge]
+    ports: ["127.0.0.1:3001:3000"]
+    restart: unless-stopped
+
+networks:
+  edge: {}
+  data:
+    internal: true # PostgreSQL and Redis are unreachable from outside the stack
+  egress: {} # OpenRouter, SMTP, S3, webhooks, ClamAV signature updates
+
+volumes:
+  postgres-data:
+  redis-data:
+  clamav-data:
+  prometheus-data:
+  grafana-data:
+
+secrets:
+  postgres_password: { file: ./secrets/postgres_password }
+  claimos_app_db_password: { file: ./secrets/claimos_app_db_password }
+  redis_password: { file: ./secrets/redis_password }
+  database_url: { file: ./secrets/database_url }
+  migration_database_url: { file: ./secrets/migration_database_url }
+  redis_url: { file: ./secrets/redis_url }
+  s3_access_key_id: { file: ./secrets/s3_access_key_id }
+  s3_secret_access_key: { file: ./secrets/s3_secret_access_key }
+  openrouter_api_key: { file: ./secrets/openrouter_api_key }
+  data_encryption_key: { file: ./secrets/data_encryption_key }
+  smtp_password: { file: ./secrets/smtp_password }
+  metrics_token: { file: ./secrets/metrics_token }
+  grafana_admin_password: { file: ./secrets/grafana_admin_password }

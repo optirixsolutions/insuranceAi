@@ -1,0 +1,28 @@
+# Non-secret settings. Secrets (database_url, migration_database_url, redis_url, s3_access_key_id,
+# s3_secret_access_key, openrouter_api_key, data_encryption_key, smtp_password, metrics_token) live in the
+# claimos-secrets Secret, mounted as files at /run/secrets, which app.core.config reads.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: claimos-config
+data:
+  APP_ENV: production
+  APP_BASE_URL: https://claims.example.com
+  LOG_LEVEL: INFO
+  LOG_JSON: "true"
+  STORAGE_PROVIDER: s3
+  S3_REGION: eu-west-2
+  S3_SERVER_SIDE_ENCRYPTION: aws:kms
+  S3_KMS_KEY_ID: ""
+  S3_BUCKET_DOCUMENTS: claimos-documents
+  S3_BUCKET_REPORTS: claimos-reports
+  AV_PROVIDER: clamav
+  CLAMAV_HOST: clamav
+  OCR_ENGINE: tesseract
+  AI_PROVIDER: openrouter
+  OPENROUTER_DEFAULT_MODEL: choose-a-production-model
+  EMAIL_PROVIDER: smtp
+  SMTP_HOST: smtp.example.com
+  SMTP_PORT: "587"
+  SMTP_FROM: ClaimOS <no-reply@example.com>
+  SMS_PROVIDER: log

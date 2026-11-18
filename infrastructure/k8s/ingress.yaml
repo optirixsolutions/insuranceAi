@@ -1,0 +1,28 @@
+# TLS at the ingress (cert-manager or a provided secret named claimos-tls). /metrics is not routed.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: claimos
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 30m
+    nginx.ingress.kubernetes.io/limit-rps: "20"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [claims.example.com]
+      secretName: claimos-tls
+  rules:
+    - host: claims.example.com
+      http:
+        paths:
+          - path: /api/
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { name: http } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: frontend, port: { name: http } }

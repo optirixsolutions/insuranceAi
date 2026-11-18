@@ -1,0 +1,42 @@
+# Run before each rollout (for example an Argo CD PreSync hook): Alembic with the migrator role.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  labels: { app.kubernetes.io/name: migrate }
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: migrate }
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      automountServiceAccountToken: false
+      containers:
+        - name: migrate
+          image: claimos-backend
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef: { name: claimos-config }
+          volumeMounts:
+            - { name: secrets, mountPath: /run/secrets, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+      volumes:
+        - name: secrets
+          secret: { secretName: claimos-secrets, defaultMode: 0440 }
+        - name: tmp
+          emptyDir: { sizeLimit: 512Mi }
